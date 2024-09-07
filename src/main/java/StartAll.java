@@ -28,10 +28,10 @@ public class StartAll {
 
     private static void runAllPlatforms() {
         safeRun(() -> Boss.main(null));
-        safeRun(() -> Liepin.main(null));
-        safeRun(() -> ZhiLian.main(null));
-        safeRun(() -> Job51.main(null));
-        safeRun(() -> Lagou.main(null));
+//        safeRun(() -> Liepin.main(null));
+//        safeRun(() -> ZhiLian.main(null));
+//        safeRun(() -> Job51.main(null));
+//        safeRun(() -> Lagou.main(null));
     }
 
     private static void scheduleTask(ScheduledExecutorService scheduler, Runnable task) {

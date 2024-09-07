@@ -30,6 +30,10 @@ public class JobUtils {
     @SneakyThrows
     public static <T> T getConfig(Class<T> clazz) {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        // 优先加载运行目录下的配置文件
+        if (CommonFileUtils.getRunDirFile("config.yaml").exists()) {
+            return mapper.readValue(CommonFileUtils.getRunDirFile("config.yaml"), clazz);
+        }
         InputStream is = clazz.getClassLoader().getResourceAsStream("config.yaml");
         if (is == null) {
             throw new FileNotFoundException("无法找到 config.yaml 文件");

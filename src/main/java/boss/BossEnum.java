@@ -45,6 +45,7 @@ public class BossEnum {
     @Getter
     public enum CityCode {
         NULL("不限", "0"),
+        HANGZHOU("杭州", "101210100"),
         ALL("全国", "100010000"),
         BEIJING("北京", "101010100"),
         SHANGHAI("上海", "101020100"),

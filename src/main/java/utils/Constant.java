@@ -8,6 +8,8 @@ public class Constant {
     public static ChromeDriver CHROME_DRIVER;
     public static Actions ACTIONS;
     public static WebDriverWait WAIT;
-    public static int WAIT_TIME = 60;
+    public static WebDriverWait SHORT_WAIT;
+    public static final int SHORT_WAIT_TIME = 5;
+    public static final int WAIT_TIME = 60;
     public static String UNLIMITED_CODE = "0";
 }

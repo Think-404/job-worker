@@ -3,6 +3,8 @@ package boss;
 import ai.AiConfig;
 import ai.AiFilter;
 import ai.AiService;
+import cn.hutool.core.thread.ThreadUtil;
+import cn.hutool.core.util.RandomUtil;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.openqa.selenium.By;
@@ -11,8 +13,10 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.CommonFileUtils;
 import utils.Job;
 import utils.JobUtils;
+import utils.RetryUtil;
 import utils.SeleniumUtil;
 
 import java.io.IOException;
@@ -21,8 +25,10 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static utils.Bot.sendMessage;
 import static utils.Bot.sendMessageByTime;
 import static utils.Constant.CHROME_DRIVER;
+import static utils.Constant.SHORT_WAIT;
 import static utils.Constant.WAIT;
 import static utils.JobUtils.formatDuration;
 
@@ -40,8 +46,8 @@ public class Boss {
     static Set<String> blackRecruiters;
     static Set<String> blackJobs;
     static List<Job> resultList = new ArrayList<>();
-    static String dataPath = "./src/main/java/boss/data.json";
-    static String cookiePath = "./src/main/java/boss/cookie.json";
+    static String dataPath = CommonFileUtils.copyClassPathResource("classpath:data.json", "data.json").getAbsolutePath();
+    static String cookiePath = CommonFileUtils.getRunDirFile("/boss/cookie.json").getAbsolutePath();
     static int noJobPages;
     static int lastSize;
     static Date startDate;
@@ -74,17 +80,38 @@ public class Boss {
             page = 1;
             noJobPages = 0;
             lastSize = -1;
+            int failLimit = 5;
             while (true) {
                 log.info("投递【{}】关键词第【{}】页", keyword, page);
                 String url = searchUrl + "&page=" + page;
                 int startSize = resultList.size();
-                Integer resultSize = resumeSubmission(url, keyword);
+                Integer resultSize;
+                long now = System.currentTimeMillis();
+                try {
+                    resultSize = resumeSubmission(url, keyword);
+                } catch (Exception e) {
+                    log.error("投递【{}】关键词第【{}】页失败", keyword, page, e);
+                    page++;
+                    failLimit--;
+                    if (failLimit <= 0) {
+                        log.error("失败【{}】次，结束该关键词的投递...", 5);
+                        break;
+                    }
+                    continue;
+                } finally {
+                    // 防止频繁访问随机休眠，至少3s访问一个页面
+                    if (System.currentTimeMillis() - now < 3000) {
+                        ThreadUtil.sleep(3000 + now - System.currentTimeMillis() + RandomUtil.randomInt(100, 2000));
+                    }
+                }
                 if (resultSize == -1) {
                     log.info("今日沟通人数已达上限，请明天再试");
+                    sendMessage("今日沟通人数已达上限，请明天再试");
                     break endSubmission;
                 }
                 if (resultSize == -2) {
                     log.info("出现异常访问，请手动过验证后再继续投递...");
+                    sendMessage("出现异常访问，请手动过验证后再继续投递...");
                     break endSubmission;
                 }
                 if (resultSize == startSize) {
@@ -101,6 +128,7 @@ public class Boss {
                 }
                 page++;
             }
+            ThreadUtil.sleep(1000);
         }
     }
 
@@ -131,7 +159,7 @@ public class Boss {
 
     private static void updateListData() {
         CHROME_DRIVER.get("https://www.zhipin.com/web/geek/chat");
-        SeleniumUtil.getWait(3);
+
 
         JavascriptExecutor js = CHROME_DRIVER;
         boolean shouldBreak = false;
@@ -223,29 +251,51 @@ public class Boss {
         blackCompanies = jsonObject.getJSONArray("blackCompanies").toList().stream().map(Object::toString).collect(Collectors.toSet());
         blackRecruiters = jsonObject.getJSONArray("blackRecruiters").toList().stream().map(Object::toString).collect(Collectors.toSet());
         blackJobs = jsonObject.getJSONArray("blackJobs").toList().stream().map(Object::toString).collect(Collectors.toSet());
+        if (blackCompanies == null) {
+            blackCompanies = new HashSet<>();
+        }
+        if (blackRecruiters == null) {
+            blackRecruiters = new HashSet<>();
+        }
     }
 
     @SneakyThrows
     private static Integer resumeSubmission(String url, String keyword) {
         CHROME_DRIVER.get(url + "&query=" + keyword);
-        WAIT.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("[class*='job-title clearfix']")));
+        log.info("打开【{}】关键词第【{}】页...", keyword, page);
+        RetryUtil.retry(() -> {
+            log.info("等待页面加载...");
+            WebElement until = SHORT_WAIT.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("div.job-title.clearfix")));
+            if (until != null) {
+                return until;
+            }
+            // 获取当前浏览器的url
+            String currentUrl = CHROME_DRIVER.getCurrentUrl();
+            if (currentUrl.contains("security-check")) {
+                log.warn("出现安全检查，刷新页面...");
+                CHROME_DRIVER.get(url + "&query=" + keyword);
+                ThreadUtil.sleep(1000);
+            }
+            return null;
+        }, 20);
         List<WebElement> jobCards = CHROME_DRIVER.findElements(By.cssSelector("li.job-card-wrapper"));
+        log.info("【{}】关键词第【{}】页共【{}】个岗位", keyword, page, jobCards.size());
         List<Job> jobs = new ArrayList<>();
         for (WebElement jobCard : jobCards) {
             WebElement infoPublic = jobCard.findElement(By.cssSelector("div.info-public"));
             String recruiterText = infoPublic.getText();
             String recruiterName = infoPublic.findElement(By.cssSelector("em")).getText();
-            if (blackRecruiters.stream().anyMatch(recruiterName::contains)) {
+            if (blackRecruiters != null && blackRecruiters.stream().anyMatch(recruiterName::contains)) {
                 // 排除黑名单招聘人员
                 continue;
             }
             String jobName = jobCard.findElement(By.cssSelector("div.job-title span.job-name")).getText();
-            if (blackJobs.stream().anyMatch(jobName::contains) || !isTargetJob(keyword, jobName)) {
+            if (blackJobs != null && blackJobs.stream().anyMatch(jobName::contains) || !isTargetJob(keyword, jobName)) {
                 // 排除黑名单岗位
                 continue;
             }
             String companyName = jobCard.findElement(By.cssSelector("div.company-info h3.company-name")).getText();
-            if (blackCompanies.stream().anyMatch(companyName::contains)) {
+            if (blackCompanies != null && blackCompanies.stream().anyMatch(companyName::contains)) {
                 // 排除黑名单公司
                 continue;
             }
@@ -264,6 +314,18 @@ public class Boss {
             jobs.add(job);
         }
         for (Job job : jobs) {
+            if (!job.recruitTimeValid()) {
+                log.info("{} 招聘已过期，跳过...", job);
+                continue;
+            }
+            if (!filterSalary(job.getSalary())) {
+                log.info("{} 薪资不匹配，跳过...", job);
+                continue;
+            }
+            if (!filterGraduateYear(job)) {
+                log.info("{} 毕业时间不匹配，跳过...", job);
+                continue;
+            }
             // 打开新的标签页并打开链接
             JavascriptExecutor jse = CHROME_DRIVER;
             jse.executeScript("window.open(arguments[0], '_blank')", job.getHref());
@@ -339,6 +401,7 @@ public class Boss {
                     WebElement cityElement = CHROME_DRIVER.findElement(By.xpath("//a[@class='position-content']/span[@class='city']"));
                     String position = positionNameElement.getText() + " " + salaryElement.getText() + " " + cityElement.getText();
                     log.info("投递【{}】公司，【{}】职位，招聘官:【{}】", company == null ? "未知公司: " + job.getHref() : company, position, recruiter);
+                    sendMessage("投递【%s】公司，【%s】职位，招聘官:【%s】".formatted(company == null ? "未知公司: " + job.getHref() : company, position, recruiter));
                     resultList.add(job);
                     noJobPages = 0;
                 } catch (Exception e) {
@@ -350,6 +413,46 @@ public class Boss {
             CHROME_DRIVER.switchTo().window(tabs.get(0));
         }
         return resultList.size();
+    }
+
+    private static boolean filterGraduateYear(Job job) {
+        if (config.getGraduateYear() == null) {
+            return true;
+        }
+        if (job.getGraduateYear() == null) {
+            return true;
+        }
+        return job.getGraduateYear().equals(config.getGraduateYear());
+    }
+
+    private static boolean filterSalary(String salary) {
+        try {
+            String[] split = salary.split("K")[0].split("-");
+            // 每年多少薪，比如14薪，如果小于阈值，则跳过
+            if (config.getMinSalaryCount() != null
+                && salary.split("K").length > 1
+                && Integer.parseInt(salary.split("K")[1].substring(1).split("薪")[0]) < config.getMinSalaryCount()) {
+                log.info("【薪次不匹配】跳过职位，薪资不匹配,{}", salary);
+                return false;
+            }
+            // 校验
+            if (
+                (config.getSalaryLeftMin() != null
+                    && config.getSalaryLeftMin() > Integer.parseInt(split[0])
+                )
+                ||
+                (config.getSalaryRightMax() != null
+                    && config.getSalaryRightMax() < Integer.parseInt(split[1])
+                )
+            ) {
+                log.info("【月薪不匹配】跳过职位，薪资不匹配, salary: {}, target: {}-{}",
+                    salary, config.getSalaryLeftMin(), config.getSalaryRightMax());
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("过滤薪资异常：{}", e.getMessage(), e);
+        }
+        return true;
     }
 
     private static AiFilter checkJob(String keyword, String jobName, String jd) {

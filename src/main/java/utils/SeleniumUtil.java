@@ -34,7 +34,12 @@ public class SeleniumUtil {
     public static void initDriver() {
         SeleniumUtil.getChromeDriver();
         SeleniumUtil.getActions();
-        SeleniumUtil.getWait(WAIT_TIME);
+        SeleniumUtil.getWait();
+        SeleniumUtil.getShortWait();
+    }
+
+    private static void getShortWait() {
+        SHORT_WAIT = new WebDriverWait(CHROME_DRIVER, SHORT_WAIT_TIME);
     }
 
     public static void getChromeDriver() {
@@ -46,21 +51,22 @@ public class SeleniumUtil {
         switch (osType) {
             case "windows":
                 options.setBinary("C:/Program Files/Google/Chrome/Application/chrome.exe");
-                System.setProperty("webdriver.chrome.driver", "src/main/resources/chromedriver.exe");
+                System.setProperty("webdriver.chrome.driver", "classpath:chromedriver.exe");
                 break;
             case "mac":
                 options.setBinary("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
-                System.setProperty("webdriver.chrome.driver", "src/main/resources/chromedriver-mac-arm64/chromedriver");
+                System.setProperty("webdriver.chrome.driver", "classpath:chromedriver-mac-arm64/chromedriver");
                 break;
             case "linux":
                 options.setBinary("/usr/bin/google-chrome-stable");
-                System.setProperty("webdriver.chrome.driver", "src/main/resources/chromedriver-linux64/chromedriver");
+                System.setProperty("webdriver.chrome.driver", "classpath:chromedriver-linux64/chromedriver");
                 break;
             default:
                 log.info("你这什么破系统，没见过，别跑了!");
                 break;
         }
-        options.addExtensions(new File("src/main/resources/xpathHelper.crx"));
+        handleDriverClassPath();
+        options.addExtensions(CommonFileUtils.copyClassPathResource("classpath:xpathHelper.crx", "xpathHelper.crx"));
         GraphicsDevice[] screens = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
         if (screens.length > 1) {
             options.addArguments("--window-position=2800,1000"); //将窗口移动到副屏的起始位置
@@ -68,6 +74,13 @@ public class SeleniumUtil {
 //        options.addArguments("--headless"); //使用无头模式
         CHROME_DRIVER = new ChromeDriver(options);
         CHROME_DRIVER.manage().window().maximize();
+    }
+
+    private static void handleDriverClassPath() {
+        String driverPath = System.getProperty("webdriver.chrome.driver");
+        File file = CommonFileUtils.copyClassPathResource(driverPath, "chromedriver");
+        file.setExecutable(true);
+        System.setProperty("webdriver.chrome.driver", file.getAbsolutePath());
     }
 
     private static String getOSType(String osName) {
@@ -176,8 +189,8 @@ public class SeleniumUtil {
         ACTIONS = new Actions(Constant.CHROME_DRIVER);
     }
 
-    public static void getWait(long time) {
-        WAIT = new WebDriverWait(Constant.CHROME_DRIVER, time);
+    public static void getWait() {
+        WAIT = new WebDriverWait(Constant.CHROME_DRIVER, WAIT_TIME);
     }
 
     public static void sleep(int seconds) {

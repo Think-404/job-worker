@@ -62,7 +62,7 @@ public class Bot {
         // 发送HTTP请求
         try {
             String response = Request.post(HOOK_URL)
-                    .bodyString("{\"msgtype\": \"text\", \"text\": {\"content\": \"" + message + "\"}}",
+                    .bodyString("{\"msg_type\": \"text\", \"content\": {\"text\": \"" + message + "\"}}",
                             org.apache.hc.core5.http.ContentType.APPLICATION_JSON)
                     .execute()
                     .returnContent()

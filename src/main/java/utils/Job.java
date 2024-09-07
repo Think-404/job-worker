@@ -1,11 +1,19 @@
 package utils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import lombok.Data;
 
 import java.io.Serializable;
+import lombok.extern.slf4j.Slf4j;
 
 @Data
+@Slf4j
 public class Job implements Serializable {
+    public static final String GRADUATE_TIME = "毕业时间:";
     /**
      * 岗位链接
      */
@@ -51,19 +59,56 @@ public class Job implements Serializable {
      */
     private String companyInfo;
 
-    @Override
-    public String toString() {
-        return String.format("【%s, %s, %s, %s, %s, %s】", companyName, jobName, jobArea, salary, companyTag, recruiter);
+    /**
+     * 招聘要求几几届的学生
+     */
+    private String graduateInfo;
+
+    private String recruitTime;
+
+    public Integer getGraduateYear() {
+        String graduateYearText = graduateInfo;
+        if (graduateInfo == null) {
+            return null;
+        }
+        if (graduateYearText.startsWith("毕业时间：不限")) {
+            log.info("【毕业时间不限】{}", graduateYearText);
+            return null;
+        }
+        // 正则匹配: 毕业时间:数字年
+        if (graduateYearText.length() <= GRADUATE_TIME.length()) {
+            log.error("【毕业时间格式错误】{}", graduateYearText);
+            return null;
+        }
+        String graduateYear = graduateYearText.substring(GRADUATE_TIME.length()).trim();
+        try {
+            return Integer.parseInt(graduateYear.substring(0, 4));
+        } catch (NumberFormatException e) {
+            log.error("【毕业时间格式错误】{}", graduateYearText);
+            return null;
+        }
+    }
+
+    public boolean recruitTimeValid() {
+        if (recruitTime == null) {
+            return true;
+        }
+        String[] splitEndTime = recruitTime.split("：");
+        if (splitEndTime.length != 2) {
+            log.warn("【截止日期格式错误】{}", recruitTime);
+            return false;
+        } else {
+            LocalDateTime endTime = LocalDate.parse(splitEndTime[1], DateTimeFormatter.ofPattern("yyyy.MM.dd")).atStartOfDay();
+            if (endTime.isBefore(LocalDateTime.now())) {
+                log.warn("【截止日期已过期】{}", recruitTime);
+                return false;
+            }
+        }
+        return true;
     }
 
     public String toString(Platform platform) {
-        if (platform == Platform.ZHILIAN) {
-            return String.format("【%s, %s, %s, %s, %s, %s, %s】", companyName, jobName, jobArea, companyTag, salary, recruiter, href);
-        }
-        if (platform == Platform.BOSS) {
-            return String.format("【%s, %s, %s, %s, %s, %s】", companyName, jobName, jobArea, salary, companyTag, recruiter);
-        }
-        return String.format("【%s, %s, %s, %s, %s, %s, %s】", companyName, jobName, jobArea, salary, companyTag, recruiter, href);
+        return toString();
     }
 }
 

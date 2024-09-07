@@ -69,6 +69,14 @@ public class BossConfig {
      */
     private Boolean aiDescribe;
 
+    private Integer salaryLeftMin;
+
+    private Integer salaryRightMax;
+
+    private Integer minSalaryCount;
+
+    private Integer graduateYear;
+
     @SneakyThrows
     public static BossConfig init() {
         BossConfig config = JobUtils.getConfig(BossConfig.class);
