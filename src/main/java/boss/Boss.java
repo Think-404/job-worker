@@ -260,7 +260,7 @@ public class Boss {
                 ThreadUtil.sleep(1000);
             }
             return null;
-        }, 20);
+        }, 10);
         List<WebElement> jobCards = CHROME_DRIVER.findElements(By.cssSelector("li.job-card-wrapper"));
         log.info("【{}】关键词第【{}】页共【{}】个岗位", keyword, page, jobCards.size());
          List<Job> jobs = new ArrayList<>();

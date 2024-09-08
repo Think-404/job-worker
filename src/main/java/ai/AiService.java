@@ -22,6 +22,7 @@ public class AiService {
     private static final String API_KEY = dotenv.get("API_KEY");
     private static final String MODEL = dotenv.get("MODEL");
 
+
     public static String sendRequest(String content) {
         // 创建 HttpClient 实例
         HttpClient client = HttpClient.newHttpClient();
