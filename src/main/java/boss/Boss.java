@@ -270,14 +270,22 @@ public class Boss {
         }, 20);
         List<WebElement> jobCards = CHROME_DRIVER.findElements(By.cssSelector("li.job-card-wrapper"));
         log.info("【{}】关键词第【{}】页共【{}】个岗位", keyword, page, jobCards.size());
-        List<Job> jobs = new ArrayList<>();
+         List<Job> jobs = new ArrayList<>();
         for (WebElement jobCard : jobCards) {
+            boolean isHeadHunting = false;
+//            WebElement tagEle = jobCard.findElement(By.cssSelector(".job-tag-icon"));
+//            isHeadHunting = !!tagEle;
             WebElement infoPublic = jobCard.findElement(By.cssSelector("div.info-public"));
             String recruiterText = infoPublic.getText();
+            isHeadHunting = recruiterText.contains("猎头");
             String recruiterName = infoPublic.findElement(By.cssSelector("em")).getText();
             String jobName = jobCard.findElement(By.cssSelector("div.job-title span.job-name")).getText();
             String companyName = jobCard.findElement(By.cssSelector("div.company-info h3.company-name")).getText();
             Job job = new Job();
+            // 判定猎头
+            if (isHeadHunting) {
+                job.setTags(List.of("猎头"));
+            }
             job.setCompanyName(companyName);
             job.setRecruiter(recruiterText.replace(recruiterName, "") + ":" + recruiterName);
             job.setHref(jobCard.findElement(By.cssSelector("a")).getAttribute("href"));
