@@ -5,7 +5,10 @@ import ai.AiFilter;
 import ai.AiService;
 import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.RandomUtil;
+import filter.Filters;
+import filter.FiltersFactory;
 import lombok.SneakyThrows;
+import model.FilterContext;
 import org.json.JSONObject;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -46,18 +49,28 @@ public class Boss {
     static Set<String> blackRecruiters;
     static Set<String> blackJobs;
     static List<Job> resultList = new ArrayList<>();
-    static String dataPath = CommonFileUtils.copyClassPathResource("classpath:data.json", "data.json").getAbsolutePath();
-    static String cookiePath = CommonFileUtils.getRunDirFile("/boss/cookie.json").getAbsolutePath();
+    static String cookiePath = CommonFileUtils.getRunDirFile("cookie.json").getAbsolutePath();
     static int noJobPages;
     static int lastSize;
     static Date startDate;
     static BossConfig config = BossConfig.init();
 
+    static Filters filters;
+
     public static void main(String[] args) {
-        loadData(dataPath);
         SeleniumUtil.initDriver();
         startDate = new Date();
+        // ShutdownHook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            CHROME_DRIVER.quit();
+            log.info("程序退出...");
+        }));
         login();
+        filters = FiltersFactory.getFilters(FilterContext.builder()
+                        .graduateYear(config.getGraduateYear())
+                        .salaryRightMax(config.getSalaryRightMax())
+                        .salaryLeftMin(config.getSalaryLeftMin())
+                .build());
         config.getCityCode().forEach(Boss::postJobByCity);
         log.info(resultList.isEmpty() ? "未发起新的聊天..." : "新发起聊天公司如下:\n{}", resultList.stream().map(Object::toString).collect(Collectors.joining("\n")));
         printResult();
@@ -67,7 +80,6 @@ public class Boss {
         String message = String.format("\nBoss投递完成，共发起%d个聊天，用时%s", resultList.size(), formatDuration(startDate, new Date()));
         log.info(message);
         sendMessageByTime(message);
-        saveData(dataPath);
         resultList.clear();
         CHROME_DRIVER.close();
         CHROME_DRIVER.quit();
@@ -194,7 +206,7 @@ public class Boss {
                     log.error("寻找黑名单公司异常...");
                 }
             }
-            WebElement element = null;
+            WebElement element;
             try {
                 WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[contains(text(), '滚动加载更多')]")));
                 element = CHROME_DRIVER.findElement(By.xpath("//div[contains(text(), '滚动加载更多')]"));
@@ -237,28 +249,6 @@ public class Boss {
         return sb.toString();
     }
 
-    private static void loadData(String path) {
-        try {
-            String json = new String(Files.readAllBytes(Paths.get(path)));
-            parseJson(json);
-        } catch (IOException e) {
-            log.error("读取【{}】数据失败！", path);
-        }
-    }
-
-    private static void parseJson(String json) {
-        JSONObject jsonObject = new JSONObject(json);
-        blackCompanies = jsonObject.getJSONArray("blackCompanies").toList().stream().map(Object::toString).collect(Collectors.toSet());
-        blackRecruiters = jsonObject.getJSONArray("blackRecruiters").toList().stream().map(Object::toString).collect(Collectors.toSet());
-        blackJobs = jsonObject.getJSONArray("blackJobs").toList().stream().map(Object::toString).collect(Collectors.toSet());
-        if (blackCompanies == null) {
-            blackCompanies = new HashSet<>();
-        }
-        if (blackRecruiters == null) {
-            blackRecruiters = new HashSet<>();
-        }
-    }
-
     @SneakyThrows
     private static Integer resumeSubmission(String url, String keyword) {
         CHROME_DRIVER.get(url + "&query=" + keyword);
@@ -285,21 +275,10 @@ public class Boss {
             WebElement infoPublic = jobCard.findElement(By.cssSelector("div.info-public"));
             String recruiterText = infoPublic.getText();
             String recruiterName = infoPublic.findElement(By.cssSelector("em")).getText();
-            if (blackRecruiters != null && blackRecruiters.stream().anyMatch(recruiterName::contains)) {
-                // 排除黑名单招聘人员
-                continue;
-            }
             String jobName = jobCard.findElement(By.cssSelector("div.job-title span.job-name")).getText();
-            if (blackJobs != null && blackJobs.stream().anyMatch(jobName::contains) || !isTargetJob(keyword, jobName)) {
-                // 排除黑名单岗位
-                continue;
-            }
             String companyName = jobCard.findElement(By.cssSelector("div.company-info h3.company-name")).getText();
-            if (blackCompanies != null && blackCompanies.stream().anyMatch(companyName::contains)) {
-                // 排除黑名单公司
-                continue;
-            }
             Job job = new Job();
+            job.setCompanyName(companyName);
             job.setRecruiter(recruiterText.replace(recruiterName, "") + ":" + recruiterName);
             job.setHref(jobCard.findElement(By.cssSelector("a")).getAttribute("href"));
             job.setJobName(jobName);
@@ -314,145 +293,99 @@ public class Boss {
             jobs.add(job);
         }
         for (Job job : jobs) {
-            if (!job.recruitTimeValid()) {
-                log.info("{} 招聘已过期，跳过...", job);
-                continue;
-            }
-            if (!filterSalary(job.getSalary())) {
-                log.info("{} 薪资不匹配，跳过...", job);
-                continue;
-            }
-            if (!filterGraduateYear(job)) {
-                log.info("{} 毕业时间不匹配，跳过...", job);
+            log.info("处理job: {}", job);
+            if (!filters.doFilter(job)) {
+                log.info("【{}】不符合过滤条件，跳过...", job.getJobName());
                 continue;
             }
             // 打开新的标签页并打开链接
             JavascriptExecutor jse = CHROME_DRIVER;
             jse.executeScript("window.open(arguments[0], '_blank')", job.getHref());
-
             // 切换到新的标签页
             ArrayList<String> tabs = new ArrayList<>(CHROME_DRIVER.getWindowHandles());
-            CHROME_DRIVER.switchTo().window(tabs.get(tabs.size() - 1));
             try {
-                WAIT.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("[class*='btn btn-startchat']")));
-            } catch (Exception e) {
-                WebElement element = SeleniumUtil.findElement(By.xpath("//div[@class='error-content']"));
-                if (element != null && element.getText().contains("异常访问")) {
-                    return -2;
-                }
-            }
-            // 随机等待一段时间
-            SeleniumUtil.sleep(JobUtils.getRandomNumberInRange(3, 10));
-            WebElement btn = CHROME_DRIVER.findElement(By.cssSelector("[class*='btn btn-startchat']"));
-            AiFilter filterResult = null;
-            if (config.getEnableAI()) {
-                //AI检测岗位是否匹配
-                String jd = CHROME_DRIVER.findElement(By.xpath("//div[@class='job-sec-text']")).getText();
-                filterResult = checkJob(keyword, job.getJobName(), jd);
-            }
-
-            if ("立即沟通".equals(btn.getText())) {
-                btn.click();
-                if (isLimit()) {
-                    SeleniumUtil.sleep(1);
-                    return -1;
-                }
+                CHROME_DRIVER.switchTo().window(tabs.get(tabs.size() - 1));
                 try {
-                    SeleniumUtil.sleep(1);
-                    try {
-                        CHROME_DRIVER.findElement(By.xpath("//textarea[@class='input-area']"));
-                        WebElement close = CHROME_DRIVER.findElement(By.xpath("//i[@class='icon-close']"));
-                        close.click();
-                        btn.click();
-                    } catch (Exception ignore) {
-                    }
-                    WebElement input = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@id='chat-input']")));
-                    input.click();
-                    SeleniumUtil.sleep(1);
-                    WebElement element = CHROME_DRIVER.findElement(By.xpath("//div[@class='dialog-container']"));
-                    if ("不匹配".equals(element.getText())) {
-                        CHROME_DRIVER.close();
-                        CHROME_DRIVER.switchTo().window(tabs.get(0));
-                        continue;
-                    }
-                    input.sendKeys(filterResult != null && filterResult.getResult() ? filterResult.getMessage() : config.getSayHi());
-                    WebElement send = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@type='send']")));
-                    send.click();
-
-                    WebElement recruiterNameElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[@class='name']"));
-                    WebElement recruiterTitleElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[@class='base-title']"));
-                    String recruiter = recruiterNameElement.getText() + " " + recruiterTitleElement.getText();
-
-                    WebElement companyElement;
-                    try {
-                        companyElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[not(@class)]"));
-                    } catch (Exception e) {
-                        WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//p[@class='base-info fl']/span[not(@class)]")));
-                        companyElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[not(@class)]"));
-
-                    }
-                    String company = null;
-                    if (companyElement != null) {
-                        company = companyElement.getText();
-                        job.setCompanyName(company);
-                    }
-                    WebElement positionNameElement = CHROME_DRIVER.findElement(By.xpath("//a[@class='position-content']/span[@class='position-name']"));
-                    WebElement salaryElement = CHROME_DRIVER.findElement(By.xpath("//a[@class='position-content']/span[@class='salary']"));
-                    WebElement cityElement = CHROME_DRIVER.findElement(By.xpath("//a[@class='position-content']/span[@class='city']"));
-                    String position = positionNameElement.getText() + " " + salaryElement.getText() + " " + cityElement.getText();
-                    log.info("投递【{}】公司，【{}】职位，招聘官:【{}】", company == null ? "未知公司: " + job.getHref() : company, position, recruiter);
-                    sendMessage("投递【%s】公司，【%s】职位，招聘官:【%s】".formatted(company == null ? "未知公司: " + job.getHref() : company, position, recruiter));
-                    resultList.add(job);
-                    noJobPages = 0;
+                    WAIT.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("[class*='btn btn-startchat']")));
                 } catch (Exception e) {
-                    log.error("发送消息失败:{}", e.getMessage(), e);
+                    WebElement element = SeleniumUtil.findElement(By.xpath("//div[@class='error-content']"));
+                    if (element != null && element.getText().contains("异常访问")) {
+                        return -2;
+                    }
                 }
+                // 随机等待一段时间
+                SeleniumUtil.sleep(JobUtils.getRandomNumberInRange(3, 10));
+                WebElement btn = CHROME_DRIVER.findElement(By.cssSelector("[class*='btn btn-startchat']"));
+                job.setJobInfo(CHROME_DRIVER.findElement(By.xpath("//div[@class='job-sec-text']")).getText());
+                if (!filters.doFilter(job)) {
+                    log.info("【{}】不符合过滤条件，跳过...", job.getJobName());
+                    continue;
+                }
+                if ("立即沟通".equals(btn.getText())) {
+                    btn.click();
+                    if (isLimit()) {
+                        SeleniumUtil.sleep(1);
+                        return -1;
+                    }
+                    try {
+                        SeleniumUtil.sleep(1);
+                        try {
+                            CHROME_DRIVER.findElement(By.xpath("//textarea[@class='input-area']"));
+                            WebElement close = CHROME_DRIVER.findElement(By.xpath("//i[@class='icon-close']"));
+                            close.click();
+                            btn.click();
+                        } catch (Exception ignore) {
+                        }
+                        WebElement input = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@id='chat-input']")));
+                        input.click();
+                        SeleniumUtil.sleep(1);
+                        WebElement element = CHROME_DRIVER.findElement(By.xpath("//div[@class='dialog-container']"));
+                        if ("不匹配".equals(element.getText())) {
+                            CHROME_DRIVER.close();
+                            CHROME_DRIVER.switchTo().window(tabs.get(0));
+                            continue;
+                        }
+                        input.sendKeys(config.getSayHi());
+                        WebElement send = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@type='send']")));
+                        send.click();
+
+                        WebElement recruiterNameElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[@class='name']"));
+                        WebElement recruiterTitleElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[@class='base-title']"));
+                        String recruiter = recruiterNameElement.getText() + " " + recruiterTitleElement.getText();
+
+                        WebElement companyElement;
+                        try {
+                            companyElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[not(@class)]"));
+                        } catch (Exception e) {
+                            WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//p[@class='base-info fl']/span[not(@class)]")));
+                            companyElement = CHROME_DRIVER.findElement(By.xpath("//p[@class='base-info fl']/span[not(@class)]"));
+
+                        }
+                        String company = null;
+                        if (companyElement != null) {
+                            company = companyElement.getText();
+                            job.setCompanyName(company);
+                        }
+                        WebElement positionNameElement = CHROME_DRIVER.findElement(By.xpath("//a[@class='position-content']/span[@class='position-name']"));
+                        WebElement salaryElement = CHROME_DRIVER.findElement(By.xpath("//a[@class='position-content']/span[@class='salary']"));
+                        WebElement cityElement = CHROME_DRIVER.findElement(By.xpath("//a[@class='position-content']/span[@class='city']"));
+                        String position = positionNameElement.getText() + " " + salaryElement.getText() + " " + cityElement.getText();
+                        log.info("投递【{}】公司，【{}】职位，招聘官:【{}】", company == null ? "未知公司: " + job.getHref() : company, position, recruiter);
+                        sendMessage("投递【%s】公司，【%s】职位，招聘官:【%s】".formatted(company == null ? "未知公司: " + job.getHref() : company, position, recruiter));
+                        resultList.add(job);
+                        noJobPages = 0;
+                    } catch (Exception e) {
+                        log.error("发送消息失败:{}", e.getMessage(), e);
+                    }
+                }
+            } finally {
+                SeleniumUtil.sleep(1);
+                CHROME_DRIVER.close();
+                CHROME_DRIVER.switchTo().window(tabs.get(0));
             }
-            SeleniumUtil.sleep(1);
-            CHROME_DRIVER.close();
-            CHROME_DRIVER.switchTo().window(tabs.get(0));
+
         }
         return resultList.size();
-    }
-
-    private static boolean filterGraduateYear(Job job) {
-        if (config.getGraduateYear() == null) {
-            return true;
-        }
-        if (job.getGraduateYear() == null) {
-            return true;
-        }
-        return job.getGraduateYear().equals(config.getGraduateYear());
-    }
-
-    private static boolean filterSalary(String salary) {
-        try {
-            String[] split = salary.split("K")[0].split("-");
-            // 每年多少薪，比如14薪，如果小于阈值，则跳过
-            if (config.getMinSalaryCount() != null
-                && salary.split("K").length > 1
-                && Integer.parseInt(salary.split("K")[1].substring(1).split("薪")[0]) < config.getMinSalaryCount()) {
-                log.info("【薪次不匹配】跳过职位，薪资不匹配,{}", salary);
-                return false;
-            }
-            // 校验
-            if (
-                (config.getSalaryLeftMin() != null
-                    && config.getSalaryLeftMin() > Integer.parseInt(split[0])
-                )
-                ||
-                (config.getSalaryRightMax() != null
-                    && config.getSalaryRightMax() < Integer.parseInt(split[1])
-                )
-            ) {
-                log.info("【月薪不匹配】跳过职位，薪资不匹配, salary: {}, target: {}-{}",
-                    salary, config.getSalaryLeftMin(), config.getSalaryRightMax());
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("过滤薪资异常：{}", e.getMessage(), e);
-        }
-        return true;
     }
 
     private static AiFilter checkJob(String keyword, String jobName, String jd) {

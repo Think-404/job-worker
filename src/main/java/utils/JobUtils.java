@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.SneakyThrows;
 
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.InputStream;
 import java.util.*;
 
@@ -30,15 +31,18 @@ public class JobUtils {
     @SneakyThrows
     public static <T> T getConfig(Class<T> clazz) {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        JsonNode rootNode;
         // 优先加载运行目录下的配置文件
         if (CommonFileUtils.getRunDirFile("config.yaml").exists()) {
-            return mapper.readValue(CommonFileUtils.getRunDirFile("config.yaml"), clazz);
+            rootNode = mapper.readTree(new FileReader(CommonFileUtils.getRunDirFile("config.yaml")));
+        } else {
+            try (InputStream is = clazz.getClassLoader().getResourceAsStream("config.yaml")) {
+                if (is == null) {
+                    throw new FileNotFoundException("无法找到 config.yaml 文件");
+                }
+                rootNode = mapper.readTree(is);
+            }
         }
-        InputStream is = clazz.getClassLoader().getResourceAsStream("config.yaml");
-        if (is == null) {
-            throw new FileNotFoundException("无法找到 config.yaml 文件");
-        }
-        JsonNode rootNode = mapper.readTree(is);
         String key = clazz.getSimpleName().toLowerCase().replaceAll("config", "");
         JsonNode configNode = rootNode.path(key);
         return mapper.treeToValue(configNode, clazz);

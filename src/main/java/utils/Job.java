@@ -1,14 +1,9 @@
 package utils;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
-import lombok.extern.slf4j.Slf4j;
 
 @Data
 @Slf4j
@@ -89,27 +84,6 @@ public class Job implements Serializable {
         }
     }
 
-    public boolean recruitTimeValid() {
-        if (recruitTime == null) {
-            return true;
-        }
-        String[] splitEndTime = recruitTime.split("：");
-        if (splitEndTime.length != 2) {
-            log.warn("【截止日期格式错误】{}", recruitTime);
-            return false;
-        } else {
-            LocalDateTime endTime = LocalDate.parse(splitEndTime[1], DateTimeFormatter.ofPattern("yyyy.MM.dd")).atStartOfDay();
-            if (endTime.isBefore(LocalDateTime.now())) {
-                log.warn("【截止日期已过期】{}", recruitTime);
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public String toString(Platform platform) {
-        return toString();
-    }
 }
 
 

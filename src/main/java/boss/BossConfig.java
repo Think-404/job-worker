@@ -30,6 +30,11 @@ public class BossConfig {
     private List<String> industry;
 
     /**
+     * 工作年限
+     */
+    private String workYears;
+
+    /**
      * 工作经验要求
      */
     private List<String> experience;

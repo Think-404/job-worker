@@ -16,6 +16,8 @@ public class AiConfig {
      */
     private String prompt;
 
+    private String enabled;
+
     public AiConfig() {
     }
 
@@ -27,6 +29,11 @@ public class AiConfig {
     public static AiConfig init() {
         AiConfig config = JobUtils.getConfig(AiConfig.class);
         return new AiConfig(config.introduce, config.prompt);
+    }
+
+    public static void main(String[] args) {
+        System.out.println(init());
+
     }
 
 }
