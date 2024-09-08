@@ -1,5 +1,6 @@
 package filter.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import filter.Filter;
 import utils.Job;
 
@@ -16,6 +17,9 @@ public class HeadhuntingFilter implements Filter {
         if (job.getRecruiter().contains(HEAD_HUNTING)) {
             return false;
         }
-        return true;
+        if (CollUtil.isEmpty(job.getTags())) {
+            return true;
+        }
+        return job.getTags().stream().noneMatch(tag -> tag.contains(HEAD_HUNTING));
     }
 }

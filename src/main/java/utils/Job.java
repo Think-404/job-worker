@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Data
 @Slf4j
@@ -43,6 +44,11 @@ public class Job implements Serializable {
      * HR名称
      */
     private String recruiter;
+
+    /**
+     * 岗位标签
+     */
+    private List<String> tags;
 
     /**
      * 公司名字
