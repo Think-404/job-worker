@@ -36,7 +36,7 @@ public class Job implements Serializable {
     private String salary;
 
     /**
-     * 公司标签
+     * 经验年限
      */
     private String companyTag;
 
@@ -65,6 +65,9 @@ public class Job implements Serializable {
      */
     private String graduateInfo;
 
+    /**
+     * 招聘时间
+     */
     private String recruitTime;
 
     public Integer getGraduateYear() {

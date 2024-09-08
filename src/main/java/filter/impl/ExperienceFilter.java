@@ -20,9 +20,6 @@ public class ExperienceFilter implements Filter {
         if (companyTag == null) {
             return true;
         }
-        if (companyTag.contains(workYears)) {
-            return true;
-        }
         String s = companyTag;
         if (companyTag.contains("·")) {
             String[] split = companyTag.split("·");
@@ -39,6 +36,7 @@ public class ExperienceFilter implements Filter {
                         String min = split1[0].replace("年", "");
                         String max = split1[1].replace("年", "");
                         if (Integer.parseInt(min) <= Integer.parseInt(workYears) && Integer.parseInt(workYears) <= Integer.parseInt(max)) {
+                            log.warn("经验符合要求: {}, {}", companyTag, workYears);
                             return true;
                         } else {
                             log.info("经验不符合要求: {}, {}", companyTag, workYears);
@@ -60,7 +58,7 @@ public class ExperienceFilter implements Filter {
         } catch (Exception e) {
             log.error("经验过滤异常: {}, {}", companyTag, e.getMessage(), e);
         }
-
+        log.warn("经验符合要求: {}, {}", companyTag, workYears);
         return true;
     }
 }

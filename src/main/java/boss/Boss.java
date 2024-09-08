@@ -9,18 +9,13 @@ import filter.Filters;
 import filter.FiltersFactory;
 import lombok.SneakyThrows;
 import model.FilterContext;
-import org.json.JSONObject;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import utils.CommonFileUtils;
-import utils.Job;
-import utils.JobUtils;
-import utils.RetryUtil;
-import utils.SeleniumUtil;
+import utils.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,9 +25,7 @@ import java.util.stream.Collectors;
 
 import static utils.Bot.sendMessage;
 import static utils.Bot.sendMessageByTime;
-import static utils.Constant.CHROME_DRIVER;
-import static utils.Constant.SHORT_WAIT;
-import static utils.Constant.WAIT;
+import static utils.Constant.*;
 import static utils.JobUtils.formatDuration;
 
 /**
@@ -271,20 +264,19 @@ public class Boss {
         List<WebElement> jobCards = CHROME_DRIVER.findElements(By.cssSelector("li.job-card-wrapper"));
         log.info("【{}】关键词第【{}】页共【{}】个岗位", keyword, page, jobCards.size());
          List<Job> jobs = new ArrayList<>();
+         // 这里是列表页，jobCards是列表页中的所有工作的卡片的dom
         for (WebElement jobCard : jobCards) {
-            boolean isHeadHunting = false;
-//            WebElement tagEle = jobCard.findElement(By.cssSelector(".job-tag-icon"));
-//            isHeadHunting = !!tagEle;
+            boolean isHeadHunting = isHeadHunting(jobCard);
             WebElement infoPublic = jobCard.findElement(By.cssSelector("div.info-public"));
-            String recruiterText = infoPublic.getText();
-            isHeadHunting = recruiterText.contains("猎头");
+            String recruiterText = jobCard.getText();
             String recruiterName = infoPublic.findElement(By.cssSelector("em")).getText();
             String jobName = jobCard.findElement(By.cssSelector("div.job-title span.job-name")).getText();
             String companyName = jobCard.findElement(By.cssSelector("div.company-info h3.company-name")).getText();
+            // 转换出job对象
             Job job = new Job();
-            // 判定猎头
+            job.setTags(new ArrayList<>());
             if (isHeadHunting) {
-                job.setTags(List.of("猎头"));
+                job.getTags().add("猎头");
             }
             job.setCompanyName(companyName);
             job.setRecruiter(recruiterText.replace(recruiterName, "") + ":" + recruiterName);
@@ -301,12 +293,12 @@ public class Boss {
             jobs.add(job);
         }
         for (Job job : jobs) {
-            log.info("处理job: {}", job);
+            // 一开始先过滤一次，就不用进详情页了
             if (!filters.doFilter(job)) {
                 log.info("【{}】不符合过滤条件，跳过...", job.getJobName());
                 continue;
             }
-            // 打开新的标签页并打开链接
+            // 打开新的标签页并打开链接，进【详情页】
             JavascriptExecutor jse = CHROME_DRIVER;
             jse.executeScript("window.open(arguments[0], '_blank')", job.getHref());
             // 切换到新的标签页
@@ -324,7 +316,12 @@ public class Boss {
                 // 随机等待一段时间
                 SeleniumUtil.sleep(JobUtils.getRandomNumberInRange(3, 10));
                 WebElement btn = CHROME_DRIVER.findElement(By.cssSelector("[class*='btn btn-startchat']"));
+                // 再次获取更详细的信息
                 job.setJobInfo(CHROME_DRIVER.findElement(By.xpath("//div[@class='job-sec-text']")).getText());
+                WebElement experienceText = CHROME_DRIVER.findElement(By.cssSelector("[class*='text-desc text-experiece']"));
+                job.setCompanyTag(experienceText.getText().trim());
+                dealSchoolRecruitment(job);
+                // 再次过滤一遍，防止投递不合要求的工作
                 if (!filters.doFilter(job)) {
                     log.info("【{}】不符合过滤条件，跳过...", job.getJobName());
                     continue;
@@ -394,6 +391,31 @@ public class Boss {
 
         }
         return resultList.size();
+    }
+
+    private static boolean isHeadHunting(WebElement jobCard) {
+        boolean isHeadHunting;
+        // 這裏是為了判斷是否是獵頭職位，但是可能找不到標簽，所以用try-catch，抓所以異常，直接返回不是獵頭
+        try {
+            WebElement tagEle = jobCard.findElement(By.cssSelector(".job-tag-icon"));
+            isHeadHunting = tagEle != null && tagEle.getAttribute("alt").contains("猎头");
+        } catch (Exception e) {
+            return false;
+        }
+        return isHeadHunting;
+    }
+
+
+    private static void dealSchoolRecruitment(Job job) {
+        try {
+            WebElement schoolJobInfo = CHROME_DRIVER.findElement(By.cssSelector("[class*='school-job-sec']"));
+            String[] values = schoolJobInfo.getText().split(" ");
+            job.setGraduateInfo(values[0]);
+            job.setRecruitTime(values[1]);
+            log.info("【{}】是校招职位，毕业时间：【{}】，招聘时间：【{}】", job.getJobName(), values[0], values[1]);
+        } catch (Exception e) {
+            log.info("【{}】不是校招职位", job.getJobName());
+        }
     }
 
     private static AiFilter checkJob(String keyword, String jobName, String jd) {

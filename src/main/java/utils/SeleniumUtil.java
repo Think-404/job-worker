@@ -66,7 +66,7 @@ public class SeleniumUtil {
                 break;
         }
         handleDriverClassPath();
-        options.addExtensions(CommonFileUtils.copyClassPathResource("classpath:xpathHelper.crx", "xpathHelper.crx"));
+        options.addExtensions(CommonFileUtils.copyClassPathResource("classpath:xpathHelper.crx", "xpathHelper.crx", false));
         GraphicsDevice[] screens = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
         if (screens.length > 1) {
             options.addArguments("--window-position=2800,1000"); //将窗口移动到副屏的起始位置
@@ -78,7 +78,7 @@ public class SeleniumUtil {
 
     private static void handleDriverClassPath() {
         String driverPath = System.getProperty("webdriver.chrome.driver");
-        File file = CommonFileUtils.copyClassPathResource(driverPath, "chromedriver");
+        File file = CommonFileUtils.copyClassPathResource(driverPath, "chromedriver", false);
         file.setExecutable(true);
         System.setProperty("webdriver.chrome.driver", file.getAbsolutePath());
     }

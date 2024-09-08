@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 public class BlackCompanyFilter implements Filter {
 
     private final String dataPath = CommonFileUtils.copyClassPathResource("classpath:data.json", "data.json").getAbsolutePath();
-
     private Set<String> blackCompanies;
 
     @Override
@@ -35,6 +34,7 @@ public class BlackCompanyFilter implements Filter {
         } catch (IOException e) {
             log.error("读取【{}】数据失败！", path);
         }
+        System.out.println(this.blackCompanies);
     }
 
     @Override

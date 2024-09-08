@@ -2,8 +2,9 @@ package utils;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.resource.ClassPathResource;
-import java.io.File;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.File;
 
 @Slf4j
 public class CommonFileUtils {
@@ -15,6 +16,7 @@ public class CommonFileUtils {
     }
 
     public static File copyClassPathResource(String fileName, String name) {
+        log.info("fileName: {}", fileName);
         return copyClassPathResource(fileName, name, true);
     }
 
@@ -30,7 +32,7 @@ public class CommonFileUtils {
             return FileUtil.file(fileName);
         }
         File dir = FileUtil.file(userDir(), DIR);
-        if (FileUtil.exist(dir + File.separator + name)) {
+        if (FileUtil.exist(dir + File.separator + name) && !overwrite) {
             return FileUtil.file(dir, name);
         }
         File file = FileUtil.file(dir, name);
