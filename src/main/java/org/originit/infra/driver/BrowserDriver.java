@@ -1,7 +1,5 @@
 package org.originit.infra.driver;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -16,8 +14,6 @@ import java.io.File;
 @Component
 @Slf4j
 public class BrowserDriver implements ChromeDriverManager {
-
-    private ChromeDriver driver;
 
     private ChromeOptions getChromeOptions() {
         ChromeOptions options = new ChromeOptions();
@@ -68,23 +64,10 @@ public class BrowserDriver implements ChromeDriverManager {
         System.setProperty("webdriver.chrome.driver", file.getAbsolutePath());
     }
 
-
-    @PostConstruct
-    public void init() {
-        this.driver = new ChromeDriver(getChromeOptions());
-        this.driver.manage().window().maximize();
-    }
-
-    @PreDestroy
-    public void onDestroy() {
-        if (driver != null) {
-            driver.close();
-            driver.quit();
-        }
-    }
-
     @Override
-    public ChromeDriver getDriver() {
+    public ChromeDriver createDriver() {
+        ChromeDriver driver = new ChromeDriver(getChromeOptions());
+        driver.manage().window().maximize();
         return driver;
     }
 }

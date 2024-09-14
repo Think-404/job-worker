@@ -414,7 +414,7 @@ public class Boss implements DeliverExecutor {
         log.info("打开Boss直聘网站中...");
         webDriver.get(HOME_URL);
         if (SeleniumUtil.isCookieValid(cookiePath)) {
-            cookieManager.loadCookies(cookiePath);
+            cookieManager.loadCookies(webDriver, cookiePath);
             webDriver.navigate().refresh();
             SeleniumUtil.sleep(2);
         }
@@ -455,9 +455,14 @@ public class Boss implements DeliverExecutor {
                 SeleniumUtil.sleep(2);
             }
         }
-        cookieManager.saveCookies(cookiePath);
+        cookieManager.saveCookies(webDriver, cookiePath);
     }
 
 
+    @Override
+    public void close() {
+        webDriver.close();
+        webDriver.quit();
+    }
 }
 

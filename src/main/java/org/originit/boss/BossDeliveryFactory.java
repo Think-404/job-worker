@@ -30,7 +30,7 @@ public class BossDeliveryFactory implements DeliveryFactory {
     private final BotService botService;
 
     @Override
-    public DeliverExecutor getDeliverExecutor() {
-        return new Boss(configuration, aiConfig, driverManager.getDriver(), cookieManager, filters, botService);
+    public DeliverExecutor createDeliverExecutor() {
+        return new Boss(configuration, aiConfig, driverManager.createDriver(), cookieManager, filters, botService);
     }
 }

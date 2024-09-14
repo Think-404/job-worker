@@ -4,5 +4,5 @@ import org.openqa.selenium.chrome.ChromeDriver;
 
 public interface ChromeDriverManager {
 
-    ChromeDriver getDriver();
+    ChromeDriver createDriver();
 }

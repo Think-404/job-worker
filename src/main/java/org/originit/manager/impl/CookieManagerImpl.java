@@ -4,9 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.openqa.selenium.Cookie;
-import org.originit.infra.driver.ChromeDriverManager;
+import org.openqa.selenium.WebDriver;
 import org.originit.manager.CookieManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.FileWriter;
@@ -22,13 +21,10 @@ import java.util.Set;
 @Slf4j
 public class CookieManagerImpl implements CookieManager {
 
-    @Autowired
-    private ChromeDriverManager driverManager;
-
     @Override
-    public void saveCookies(String path) {
+    public void saveCookies(WebDriver driver, String path) {
         // 获取所有的cookies
-        Set<Cookie> cookies = driverManager.getDriver().manage().getCookies();
+        Set<Cookie> cookies = driver.manage().getCookies();
         // 创建一个JSONArray来保存所有的cookie信息
         JSONArray jsonArray = new JSONArray();
         // 将每个cookie转换为一个JSONObject，并添加到JSONArray中
@@ -70,9 +66,9 @@ public class CookieManagerImpl implements CookieManager {
     }
 
     @Override
-    public void loadCookies(String cookiePath) {
+    public void loadCookies(WebDriver driver, String cookiePath) {
         // 首先清除由于浏览器打开已有的cookies
-        driverManager.getDriver().manage().deleteAllCookies();
+        driverManager.createDriver().manage().deleteAllCookies();
         // 从文件中读取JSONArray
         JSONArray jsonArray = null;
         try {
@@ -107,7 +103,7 @@ public class CookieManagerImpl implements CookieManager {
                         .isHttpOnly(isHttpOnly)
                         .build();
                 try {
-                    driverManager.getDriver().manage().addCookie(cookie);
+                    driver.manage().addCookie(cookie);
                 } catch (Exception ignore) {
                 }
             }
