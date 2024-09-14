@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: Job-executor
+delivery:
+  keywords: [ "Java", "后端", "Golang" ] # 需要搜索的职位,会依次投递
+  industries: [ "不限" ] # 公司行业，只能选三个，相关代码枚举的部分，如果需要其他的需要自己找
+  cities: [ "杭州", "上海", "北京", "广州", "深圳", "成都" ] # 只列举了部分,如果没有的需要自己找：目前支持的：全国 北京 上海 广州 深圳 成都
+  experience: [ "一年以内", "1-3年", "应届生" ] # 工作经验："应届毕业生", "1年以下", "1-3年", "3-5年", "5-10年", "10年以上"
+  jobType: "全职" #求职类型：, "兼职"
+  salaryLeftMin: 15 # 最低薪资
+  salaryRightMax: 30 # 最高薪资
+  graduateYear: 2024 # 毕业年份
+  salary: [ "10-20K", "20-50K" ] # 薪资（单选）："3K以下", "3-5K", "5-10K", "10-20K", "20-50K", "50K以上"
+  degree: [ "不限" ] # 学历: "初中及以下", "中专/中技", "高中", "大专", "本科", "硕士", "博士"
+  scale: [ "100-499人", "500-999人", "1000-9999人", "10000人以上" ] # 公司规模："0-20人", "20-99人", "100-499人", "500-999人", "1000-9999人", "10000人以上"
+  stage: [ "不限" ] # "未融资", "天使轮", "A轮", "B轮", "C轮", "D轮及以上", "已上市", "不需要融资"
+  enableAI: true #开启AI检测与自动生成打招呼语
+  workYears: 1
+  black-companies:
+    - "博彦"
+    - "软通"
+    - "中软"
+    - "拓维"
+    - "易宝"
+    - "华为"
+    - "德科"
+    - "阿里"
+    - "法本"
+    - "华盛"
+    - "恒辉"
+    - "恒润"
+    - "五木"
+    - "中科软"
+    - "浪潮"
+    - "亚信"
+    - "新致"
+    - "博朗"
+    - "东软"
+    - "中电金信"
+    - "纬创"
+    - "微创"
+    - "佰钧成"
+    - "科锐"
+    - "信也"
+    - "CloudBu"
+    - "Cloud Bu"
+    - "云布"
+    - "金蝶"
+    - "用友"
+    - "外派"
+    - "外包"
+    - "驻场"
+    - "派遣"
+    - "OD"
+  introduction: Java全栈,云原生Kafka一年经验24届。计算机基础扎实,项目经验丰富,精通Java,熟悉Java并发,JVM原理。熟悉 MySQL、Redis、Kafka、RocketMQ的原理和实践，热爱研究框架源码如MyBatis、Spring、SpringMVC,JDK常用类。熟悉Golang了解Rust,熟悉Docker及原理。
+
+platform: boss
+
+bot:
+  enable: true #开启企业微信消息推送
+  hook-url: https://open.feishu.cn/open-apis/bot/v2/hook/387f73e5-5dea-45fe-abff-ec65f39fbf35
+
+ai:
+  ai-enabled: true
+  base-url: https://aigptx.top
+  api-key: sk-EicDBKN60af0520b4349T3BlBkFJBe4513Fcd60F4f378D1a
+  model: gpt-3.5-turbo

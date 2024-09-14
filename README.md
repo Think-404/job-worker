@@ -70,7 +70,7 @@ cd get_jobs
 - 📢 企业微信消息推送设置
     - 把[.env_template](src/main/resources/.env_template)文件重命名为`.env`
     - 在企业微信中创建一个群聊，然后添加机器人，获取到机器人URL，复制到`.env`文件中的`HOOK_URL`即可
-    - 保持[config.yaml](src/main/resources/config.yaml)文件中`bot.is_send`为true
+    - 保持[org.originit.config.yaml](src/main/resources/config.yaml)文件中`bot.is_send`为true
     - 企业微信推送示例  
       <img src="src/main/resources/images/companyWechat.png" alt="企业微信推送示例">
 
@@ -94,10 +94,10 @@ cd get_jobs
       <img src="src/main/resources/images/AiSayHi.png" alt="AI生成的打招呼语示例">
 
 
-- ⚙️ **主要的配置文件**（[config.yaml](src/main/resources/config.yaml))
+- ⚙️ **主要的配置文件**（[org.originit.config.yaml](src/main/resources/config.yaml))
   ```
   # 带[ ]括号的，就是多选，不带的就是单选
-  boss:
+  org.originit.boss:
     sayHi: "您好,我有7年工作经验,还有AIGC大模型、Java,Python,Golang和运维的相关经验,希望应聘这个岗位,期待可以与您进一步沟通,谢谢！" #必须要关闭boss的自动打招呼
     keywords: [ "大模型工程师", "AI工程师", "Python", "Golang", "Java" ] # 需要搜索的职位,会依次投递
     industry: [ "不限" ] # 公司行业，只能选三个，相关代码枚举的部分，如果需要其他的需要自己找
@@ -110,29 +110,29 @@ cd get_jobs
     stage: [ "不限" ] # "未融资", "天使轮", "A轮", "B轮", "C轮", "D轮及以上", "已上市", "不需要融资"
     enableAI: true #开启AI检测与自动生成打招呼语
 
-  job51:
+  org.originit.job51:
     jobArea: [ "上海" ]  #工作地区：目前只有【北京 成都 上海 广州 深圳】
     keywords: [ "java", "python", "go", "golang", "大模型", "软件工程师" ] #关键词：依次投递
     salary: [ "不限" ] #薪资范围：只能选5个【"2千以下", "2-3千", "3-4.5千", "4.5-6千", "6-8千", "0.8-1万", "1-1.5万", "1.5-2万", "2-3万", "3-4万", "4-5万", "5万以上"】
 
-  lagou:
+  org.originit.lagou:
     keywords: [ "AI工程师","Java","Golang","Python" ] #搜索关键词
     cityCode: "上海" #拉勾城市名没有限制,直接填写即可
     salary: "不限" #薪资【"不限","2k以下", "2k-5k", "5k-10k", "10k-15k", "15k-25k", "25k-50k", "50k以上"】
     scale: [ "不限" ] #公司规模【"不限","少于15人", "15-50人", "50-150人", "150-500人", "500-2000人", "2000人以上"】
     gj: "在校/应届,3年及以下"
 
-  liepin:
+  org.originit.liepin:
     cityCode: "上海" # 目前支持的：全国 北京 上海 广州 深圳 成都
     keywords: [ "Java", "Python", "Golang", "大模型" ]
     salary: "不限" # 填 15$30 代表 15k-30k
 
-  zhilian:
+  org.originit.zhilian:
     cityCode: "上海"
     salary: "25001,35000" #薪资区间
     keywords: [ "AI", "Java", "Python", "Golang" ]
 
-  ai:
+  org.originit.ai:
     introduce: "我熟练使用Spring Boot、Spring Cloud、Alibaba Cloud及其生态体系，擅长MySQL、Oracle、PostgreSQL等关系型数据库以及MongoDB、Redis等非关系型数据库。熟悉Docker、Kubernetes等容器化技术，掌握WebSocket、Netty等通信协议，拥有即时通讯系统的开发经验。熟练使用MyBatis-Plus、Spring Data、Django ORM等ORM框架，熟练使用Python、Golang开发，具备机器学习、深度学习及大语言模型的开发与部署经验。此外，我熟悉前端开发，涉及Vue、React、Nginx配置及PHP框架应用" #这是喂给AI的提示词，主要介绍自己的优势
     prompt: "我目前在找工作,%s,我期望的的岗位方向是【%s】,目前我需要投递的岗位名称是【%s】,这个岗位的要求是【%s】,如果这个岗位和我的期望与经历基本符合，注意是基本符合，那么请帮我写一个给HR打招呼的文本发给我，如果这个岗位和我的期望经历完全不相干，直接返回false给我，注意只要返回我需要的内容即可，不要有其他的语气助词，重点要突出我和岗位的匹配度以及我的优势，我自己写的招呼语是：【%s】,你可以参照我自己写的根据岗位情况进行适当调整" #这是AI的提示词，可以自行修改
 
@@ -186,7 +186,7 @@ cd get_jobs
 
 ### 5️⃣ 定时投递或全部投递
 
-- 启动[StartAll.java](src/main/java/StartAll.java)即可投递所有平台
+- 启动[org.originit.StartAll.java](src/main/java/StartAll.java)即可投递所有平台
 - 但是需要你在之前的平台已经登录成功，否则会卡住
 - 目前默认为第二天早上8点，可以修改相关代码修改时间
 - 每个包下的Scheduled文件，即使单独针对平台的定时投递，例：[BossScheduled.java](src/main/java/boss/BossScheduled.java)
