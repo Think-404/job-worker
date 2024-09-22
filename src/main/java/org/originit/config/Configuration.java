@@ -104,6 +104,8 @@ public class Configuration implements JobSearchConfig, PersonalInfoConfig {
 
     private Set<String> blackCompanies;
 
+    private String personalDegree;
+
     public String getDescription() {
         if (description == null) {
             return introduction;

@@ -205,13 +205,18 @@ public class SeleniumUtil {
         WAIT = new WebDriverWait(Constant.CHROME_DRIVER, Duration.ofSeconds(WAIT_TIME));
     }
 
-    public static void sleep(int seconds) {
+    public static void sleep(long milliseconds) {
         try {
-            TimeUnit.SECONDS.sleep(seconds);
+            log.info("Sleeping for {} milliseconds", milliseconds);
+            Thread.sleep(milliseconds);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Sleep was interrupted", e);
         }
+    }
+
+    public static void sleep(int seconds) {
+        sleep(seconds * 1000L);
     }
 
     public static void sleepByMilliSeconds(int milliSeconds) {

@@ -14,4 +14,6 @@ public interface PersonalInfoConfig {
 
     Integer getGraduateYear();
 
+    String getPersonalDegree();
+
 }

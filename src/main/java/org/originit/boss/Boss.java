@@ -1,8 +1,6 @@
 package org.originit.boss;
 
-import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.RandomUtil;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -15,6 +13,8 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.originit.config.AIConfig;
 import org.originit.config.Configuration;
 import org.originit.config.CustomConfiguration;
+import org.originit.error.DeliveryErrorCode;
+import org.originit.error.exception.DeliverySystemException;
 import org.originit.executor.DeliverExecutor;
 import org.originit.filter.Filters;
 import org.originit.manager.CookieManager;
@@ -37,7 +37,6 @@ import static org.originit.utils.JobUtils.formatDuration;
  * @author loks666
  * Boss直聘自动投递
  */
-@RequiredArgsConstructor
 public class Boss implements DeliverExecutor {
     public static final int NO_JOB_MAX_PAGE = 5; // 无岗位最大页数
     public static final String HOME_URL = "https://www.zhipin.com";
@@ -68,15 +67,57 @@ public class Boss implements DeliverExecutor {
 
     private FilterContext filterContext;
 
+    public Boss(Configuration configuration, AIConfig aiConfig, ChromeDriver webDriver, CookieManager cookieManager, Filters filters, BotService botService) {
+        this.configuration = configuration;
+        this.aiConfig = aiConfig;
+        this.webDriver = webDriver;
+        this.cookieManager = cookieManager;
+        this.filters = filters;
+        this.botService = botService;
+
+
+        this.wait = new WebDriverWait(webDriver, Duration.ofSeconds(Constant.WAIT_TIME));
+        this.shortWait = new WebDriverWait(webDriver, Duration.ofSeconds(Constant.SHORT_WAIT_TIME));
+    }
+
+    @Override
+    public boolean checkCookie(CustomConfiguration customConfiguration) {
+        cookiePath = CommonFileUtils.getRunDirFile(customConfiguration.getUserId() + File.pathSeparator + "cookies.json").getAbsolutePath();
+        webDriver.get(HOME_URL);
+        if (SeleniumUtil.isCookieValid(cookiePath)) {
+            cookieManager.loadCookies(webDriver, cookiePath);
+            webDriver.navigate().refresh();
+            SeleniumUtil.sleep(3);
+        }
+        webDriver.get(HOME_URL);
+        return !isLoginRequired();
+    }
+
+    @Override
+    public void tryLogin(CustomConfiguration customConfiguration) {
+        login(customConfiguration);
+    }
+
     @Override
     public void execute(CustomConfiguration customConfiguration) {
+        try {
+            doExecute(customConfiguration);
+        } catch (DeliverySystemException e) {
+            if (e.getErrorCode() == DeliveryErrorCode.DELIVERY_FINISHED) {
+                log.info("投递完成");
+            } else {
+                log.error("投递异常", e);
+                botService.sendMessageWithDateTime("投递异常：" + e.getMessage());
+            }
+        }
+    }
+
+    private void doExecute(CustomConfiguration customConfiguration) {
+        this.startDate = new Date();
         cookiePath = CommonFileUtils.getRunDirFile(customConfiguration.getUserId() + File.pathSeparator + "cookies.json").getAbsolutePath();
-        wait = new WebDriverWait(webDriver, Duration.ofSeconds(Constant.WAIT_TIME));
-        shortWait = new WebDriverWait(webDriver, Duration.ofSeconds(Constant.SHORT_WAIT_TIME));
-        startDate = new Date();
         log.info("Boss直聘自动投递开始");
         log.info("配置信息：{}", configuration);
-        login();
+        login(customConfiguration);
         filterContext = FilterContext.builder()
                 .configuration(configuration)
                 .aiConfig(aiConfig)
@@ -137,13 +178,13 @@ public class Boss implements DeliverExecutor {
                 } finally {
                     // 防止频繁访问随机休眠，至少3s访问一个页面
                     if (System.currentTimeMillis() - now < 3000) {
-                        ThreadUtil.sleep(3000 + now - System.currentTimeMillis() + RandomUtil.randomInt(100, 2000));
+                        SeleniumUtil.sleep(3000 + now - System.currentTimeMillis() + RandomUtil.randomInt(100, 2000));
                     }
                 }
                 if (resultSize == -1) {
                     log.info("今日沟通人数已达上限，请明天再试");
                     botService.sendMessage("今日沟通人数已达上限，请明天再试");
-                    throw new RuntimeException("今日沟通人数已达上限，请明天再试");
+                    throw new DeliverySystemException(DeliveryErrorCode.DELIVERY_FINISHED);
                 }
                 if (resultSize == -2) {
                     log.info("出现异常访问，请手动过验证后再继续投递...");
@@ -163,7 +204,7 @@ public class Boss implements DeliverExecutor {
                 }
                 page++;
             }
-            ThreadUtil.sleep(1000);
+            SeleniumUtil.sleep(1);
         }
     }
 
@@ -203,7 +244,7 @@ public class Boss implements DeliverExecutor {
             if (currentUrl.contains("security-check")) {
                 log.warn("出现安全检查，刷新页面...");
                 webDriver.get(url + "&query=" + keyword);
-                ThreadUtil.sleep(1000);
+                SeleniumUtil.sleep(1);
             }
             return null;
         }, 10);
@@ -237,6 +278,10 @@ public class Boss implements DeliverExecutor {
             }
             job.setCompanyTag(tag.substring(0, tag.length() - 1));
             jobs.add(job);
+        }
+        // 50%的概率，休息一段时间
+        if (JobUtils.getRandomNumberInRange(1, 2) == 1) {
+            SeleniumUtil.sleep(1);
         }
         for (Job job : jobs) {
             // 一开始先过滤一次，就不用进详情页了
@@ -323,6 +368,10 @@ public class Boss implements DeliverExecutor {
                         log.info("投递【{}】公司，【{}】职位，招聘官:【{}】", company == null ? "未知公司: " + job.getHref() : company, position, recruiter);
                         botService.sendMessage("投递【%s】公司，【%s】职位，招聘官:【%s】".formatted(company == null ? "未知公司: " + job.getHref() : company, position, recruiter));
                         resultList.add(job);
+                        // 5%的概率，休息一段时间
+                        if (JobUtils.getRandomNumberInRange(1, 20) == 1) {
+                            SeleniumUtil.sleep(1);
+                        }
                         noJobPages = 0;
                     } catch (Exception e) {
                         log.error("发送消息失败:{}", e.getMessage(), e);
@@ -410,16 +459,8 @@ public class Boss implements DeliverExecutor {
     }
 
     @SneakyThrows
-    private void login() {
-        log.info("打开Boss直聘网站中...");
-        webDriver.get(HOME_URL);
-        if (SeleniumUtil.isCookieValid(cookiePath)) {
-            cookieManager.loadCookies(webDriver, cookiePath);
-            webDriver.navigate().refresh();
-            SeleniumUtil.sleep(2);
-        }
-        webDriver.get(HOME_URL);
-        if (isLoginRequired()) {
+    private void login(CustomConfiguration customConfiguration) {
+        if (!checkCookie(customConfiguration)) {
             log.error("cookie失效，尝试扫码登录...");
             scanLogin();
         }

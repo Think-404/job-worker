@@ -24,7 +24,7 @@ public class BlackCompanyFilter implements Filter {
             return true;
         }
         for (String blackCompany : blackCompanies) {
-            if (job.getCompanyName().toLowerCase().contains(blackCompany.toLowerCase())) {
+            if (job.getCompanyName().toLowerCase().contains(blackCompany.toLowerCase()) || job.getJobName().toLowerCase().contains(blackCompany.toLowerCase())) {
                 log.info("【黑名单公司】跳过职位，公司【{}】名包含黑名单公司: {}",
                         job.getCompanyName(), blackCompany);
                 return false;

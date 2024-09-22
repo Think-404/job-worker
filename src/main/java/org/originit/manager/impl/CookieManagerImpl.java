@@ -59,7 +59,6 @@ public class CookieManagerImpl implements CookieManager {
         // 将JSONArray写入到一个文件中
         try (FileWriter file = new FileWriter(path)) {
             file.write(jsonArray.toString(4));  // 使用4个空格的缩进
-            log.info("cookie文件更新：{}", path);
         } catch (IOException e) {
             log.error("更新cookie异常！保存路径:{}", path);
         }
@@ -68,7 +67,7 @@ public class CookieManagerImpl implements CookieManager {
     @Override
     public void loadCookies(WebDriver driver, String cookiePath) {
         // 首先清除由于浏览器打开已有的cookies
-        driverManager.createDriver().manage().deleteAllCookies();
+        driver.manage().deleteAllCookies();
         // 从文件中读取JSONArray
         JSONArray jsonArray = null;
         try {

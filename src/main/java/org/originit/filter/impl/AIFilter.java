@@ -30,10 +30,10 @@ public class AIFilter implements Filter {
             return true;
         }
         Configuration bossConfig = context.getConfiguration();
-        StringBuilder requestMessage = new StringBuilder();
-        if (bossConfig.getKeywords() != null && !bossConfig.getKeywords().isEmpty()) {
-            requestMessage.append(",我对【").append(String.join(",", bossConfig.getKeywords())).append("】比较感兴趣");
+        if (!checkTitle(job, bossConfig, aiConfig)) {
+            return false;
         }
+        StringBuilder requestMessage = new StringBuilder();
         if (bossConfig.getGraduateYear() != null) {
             requestMessage.append(",我是").append(bossConfig.getGraduateYear()).append("届毕业生");
         }
@@ -42,6 +42,9 @@ public class AIFilter implements Filter {
         }
         if (bossConfig.getMinSalaryCount() != null) {
             requestMessage.append(",我的期望薪次是【").append(bossConfig.getMinSalaryCount()).append("】");
+        }
+        if (bossConfig.getPersonalDegree() != null) {
+            requestMessage.append(",我的学历是【").append(bossConfig.getPersonalDegree()).append("】");
         }
         if (bossConfig.getSalaryLeftMin() != null) {
             requestMessage.append("我的最低薪资要求是【").append(bossConfig.getSalaryLeftMin()).append("】");
@@ -57,8 +60,8 @@ public class AIFilter implements Filter {
                 .append("要求【").append(cleanString(jobInfo)).append("】.");
         if (bossConfig.getDescription() != null) {
             requestMessage.append("我的经历:").append(bossConfig.getDescription())
-                    .append(",如果这个岗位和我的期望与经历基本符合,")
-                    .append("注意是基本符合，请返回true,否则返回false.");
+                    .append(",如果这个岗位和我的期望与条件符合,")
+                    .append("请返回true,否则返回false.");
         }
         String result = aiService.sendRequest(aiConfig, requestMessage.toString());
         boolean res = result.contains("true");
@@ -67,6 +70,24 @@ public class AIFilter implements Filter {
         }
         log.info("AI Filter result: {}", res);
         return res;
+    }
+
+    private boolean checkTitle(Job job, Configuration bossConfig, AIConfig aiConfig) {
+        StringBuilder requestMessage = new StringBuilder();
+        if (bossConfig.getKeywords() != null && !bossConfig.getKeywords().isEmpty()) {
+            requestMessage.append(",我对【").append(String.join(",", bossConfig.getKeywords())).append("】比较感兴趣,");
+            requestMessage.append("岗位的名称是【").append(job.getJobName()).append("】.");
+            requestMessage.append(",如果这个岗位和我的期望与条件符合,")
+                    .append("请返回true,否则返回false.");
+            String result = aiService.sendRequest(aiConfig, requestMessage.toString());
+            boolean res = result.contains("true");
+            if (!res) {
+                log.error("AI Filter failed, jobTitle: {}, result: {}", job.getJobName(), result);
+            }
+            log.info("AI Filter result: {}", res);
+            return res;
+        }
+        return true;
     }
 
     public static String cleanString(String input) {

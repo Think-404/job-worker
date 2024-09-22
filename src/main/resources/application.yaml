@@ -2,7 +2,7 @@ spring:
   application:
     name: Job-executor
 delivery:
-  keywords: [ "Java", "后端", "Golang" ] # 需要搜索的职位,会依次投递
+  keywords: [ "Java后端", "Java全栈", "Golang后端", "Java云原生", "golang云原生" ] # 需要搜索的职位,会依次投递
   industries: [ "不限" ] # 公司行业，只能选三个，相关代码枚举的部分，如果需要其他的需要自己找
   cities: [ "杭州", "上海", "北京", "广州", "深圳", "成都" ] # 只列举了部分,如果没有的需要自己找：目前支持的：全国 北京 上海 广州 深圳 成都
   experience: [ "一年以内", "1-3年", "应届生" ] # 工作经验："应届毕业生", "1年以下", "1-3年", "3-5年", "5-10年", "10年以上"
@@ -16,6 +16,7 @@ delivery:
   stage: [ "不限" ] # "未融资", "天使轮", "A轮", "B轮", "C轮", "D轮及以上", "已上市", "不需要融资"
   enableAI: true #开启AI检测与自动生成打招呼语
   workYears: 1
+  personal-degree: "非985,非211,非双一流,硕士"
   black-companies:
     - "博彦"
     - "软通"
