@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.originit.config.AIConfig;
+import org.originit.model.Result;
 import org.originit.service.AIService;
 import org.springframework.stereotype.Component;
 
@@ -21,9 +22,9 @@ import java.util.Objects;
 @Component
 public class AIServiceImpl implements AIService {
 
-    public String sendRequest(AIConfig aiConfig, String content) {
+    public Result<String, String> sendRequest(AIConfig aiConfig, String content) {
         if (!Objects.equals(aiConfig.getAiEnabled(), true)) {
-            return "Failed, AI is not enabled";
+            return Result.error("Failed, AI is not enabled");
         }
         // 创建 HttpClient 实例
         HttpClient client = HttpClient.newHttpClient();
@@ -83,14 +84,15 @@ public class AIServiceImpl implements AIService {
                 String formattedTime = createdTime.format(formatter);
 
                 log.info("请求ID: {}, 创建时间: {}, 模型名: {}, 提示词: {}, 补全: {}, 总用量: {}", requestId, formattedTime, model, promptTokens, completionTokens, totalTokens);
-                return responseContent;
+                return Result.success(responseContent);
             } else {
-                log.error("AI请求失败！");
+                log.error("AI请求失败！response: {}", response);
+                return Result.error("AI请求失败！当前状态为" + response.statusCode() + "，响应: " + response.body());
             }
         } catch (Exception e) {
-            log.error("AI请求异常！");
+            log.error("AI请求失败！", e);
+            return Result.error("AI请求失败！");
         }
-        return "";
     }
 
 }
