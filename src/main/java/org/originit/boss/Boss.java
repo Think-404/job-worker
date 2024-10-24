@@ -1,5 +1,7 @@
 package org.originit.boss;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import lombok.SneakyThrows;
 import org.openqa.selenium.By;
@@ -28,6 +30,7 @@ import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -118,6 +121,8 @@ public class Boss implements DeliverExecutor {
         log.info("Boss直聘自动投递开始");
         log.info("配置信息：{}", configuration);
         login(customConfiguration);
+        log.info("登录成功");
+        Configuration configuration = mergeConfiguration(customConfiguration, this.configuration);
         filterContext = FilterContext.builder()
                 .configuration(configuration)
                 .aiConfig(aiConfig)
@@ -142,6 +147,16 @@ public class Boss implements DeliverExecutor {
         }
         log.info(resultList.isEmpty() ? "未发起新的聊天..." : "新发起聊天公司如下:\n{}", resultList.stream().map(Object::toString).collect(Collectors.joining("\n")));
         printResult();
+    }
+
+    private Configuration mergeConfiguration(CustomConfiguration customConfiguration, Configuration configuration) {
+        Configuration res = BeanUtil.toBean(configuration, Configuration.class);
+        if (customConfiguration != null && CollUtil.isNotEmpty(customConfiguration.getBlacklist())) {
+            HashSet<String> blackCompanies = new HashSet<>(configuration.getBlackCompanies());
+            blackCompanies.addAll(customConfiguration.getBlacklist());
+            res.setBlackCompanies(blackCompanies);
+        }
+        return res;
     }
 
     private void printResult() {
@@ -479,12 +494,12 @@ public class Boss implements DeliverExecutor {
 
     @SneakyThrows
     private void scanLogin() {
-        webDriver.get(HOME_URL + "/web/user/?ka=header-login");
-        log.info("等待登陆..");
-        WebElement app = wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@class='btn-sign-switch ewm-switch']")));
         boolean login = false;
         while (!login) {
             try {
+                webDriver.get(HOME_URL + "/web/user/?ka=header-login");
+                log.info("等待登陆..");
+                WebElement app = wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@class='btn-sign-switch ewm-switch']")));
                 app.click();
                 wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[@id=\"header\"]/div[1]/div[1]/a")));
                 wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[@id=\"wrap\"]/div[2]/div[1]/div/div[1]/a[2]")));

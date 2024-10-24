@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -12,4 +14,6 @@ import lombok.NoArgsConstructor;
 public class CustomConfiguration {
 
     private String userId;
+
+    private Set<String> blacklist;
 }

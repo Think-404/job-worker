@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -35,12 +36,12 @@ public class Configuration implements JobSearchConfig, PersonalInfoConfig {
     /**
      * 城市
      */
-    private Set<String> cities;
+    private LinkedHashSet<String> cities;
 
     /**
      * 行业列表
      */
-    private Set<String> industries;
+    private LinkedHashSet<String> industries;
 
     /**
      * 工作年限 1-10 年, -10 表示 超过 10 年， 0表示应届 -k表示距离毕业k年

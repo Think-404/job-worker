@@ -52,6 +52,7 @@ public class BrowserDriver implements ChromeDriverManager {
 //            options.addArguments("--window-position=2800,1000"); //将窗口移动到副屏的起始位置
 //        }
 //        options.addArguments("--headless"); //使用无头模式
+//        options.addArguments("--no-sandbox");
         // 无痕模式
         options.addArguments("--incognito");
         return options;

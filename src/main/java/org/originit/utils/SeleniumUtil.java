@@ -208,7 +208,7 @@ public class SeleniumUtil {
     public static void sleep(long milliseconds) {
         try {
             log.info("Sleeping for {} milliseconds", milliseconds);
-            Thread.sleep(milliseconds);
+            Thread.sleep(milliseconds / 10);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Sleep was interrupted", e);

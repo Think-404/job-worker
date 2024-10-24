@@ -10,6 +10,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -30,7 +31,6 @@ public class Launcher {
         builder.web(WebApplicationType.NONE);
         builder.allowCircularReferences(true);
         SpringApplication app = builder.build();
-
         ConfigurableApplicationContext context = app.run(args);
         if (context.getBean(Launcher.class).execute) {
             execute(context);
@@ -39,7 +39,7 @@ public class Launcher {
         }
     }
 
-    private static void execute(ConfigurableApplicationContext context) {
+    private static void execute(ApplicationContext context) {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         new Thread(() -> {
             try (DeliverExecutor deliverExecutor = context.getBean(DeliveryFactory.class)
@@ -63,7 +63,7 @@ public class Launcher {
     }
 
 
-    private static void check(ConfigurableApplicationContext context) {
+    private static void check(ApplicationContext context) {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         new Thread(() -> {
             try (DeliverExecutor deliverExecutor = context.getBean(DeliveryFactory.class)

@@ -6,6 +6,7 @@ import org.originit.config.AIConfig;
 import org.originit.config.Configuration;
 import org.originit.filter.Filter;
 import org.originit.model.FilterContext;
+import org.originit.model.Result;
 import org.originit.service.AIService;
 import org.originit.utils.Job;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,13 +64,24 @@ public class AIFilter implements Filter {
                     .append(",如果这个岗位和我的期望与条件符合,")
                     .append("请返回true,否则返回false.");
         }
-        String result = aiService.sendRequest(aiConfig, requestMessage.toString());
-        boolean res = result.contains("true");
-        if (!res) {
-            log.error("AI Filter failed, job: {}, result: {}", job, result);
+        try {
+            Result<String, String> response = aiService.sendRequest(aiConfig, requestMessage.toString());
+            if (!response.isSuccess()) {
+                log.error("AI Filter failed and skip, job: {}, error: {}", job, response.getError());
+                return true;
+            }
+            String result = response.getData();
+            boolean res = result.contains("true");
+            if (!res) {
+                log.error("AI Filter failed, job: {}, result: {}", job, result);
+            }
+            log.info("AI Filter result: {}", res);
+            return res;
+        } catch (Exception e) {
+            log.error("AI Filter failed, job: {}, error: {}", job, e.getMessage(), e);
+            return true;
         }
-        log.info("AI Filter result: {}", res);
-        return res;
+
     }
 
     private boolean checkTitle(Job job, Configuration bossConfig, AIConfig aiConfig) {
@@ -79,8 +91,12 @@ public class AIFilter implements Filter {
             requestMessage.append("岗位的名称是【").append(job.getJobName()).append("】.");
             requestMessage.append(",如果这个岗位和我的期望与条件符合,")
                     .append("请返回true,否则返回false.");
-            String result = aiService.sendRequest(aiConfig, requestMessage.toString());
-            boolean res = result.contains("true");
+            Result<String, String> result = aiService.sendRequest(aiConfig, requestMessage.toString());
+            if (!result.isSuccess()) {
+                log.error("AI Filter failed and skip, jobTitle: {}, error: {}", job.getJobName(), result.getError());
+                return true;
+            }
+            boolean res = result.getData().contains("true");
             if (!res) {
                 log.error("AI Filter failed, jobTitle: {}, result: {}", job.getJobName(), result);
             }
