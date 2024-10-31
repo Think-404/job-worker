@@ -28,6 +28,7 @@ public class Launcher {
 
     public static void main(String[] args) {
         SpringApplicationBuilder builder = new SpringApplicationBuilder(Launcher.class);
+        //不启动web服务器
         builder.web(WebApplicationType.NONE);
         builder.allowCircularReferences(true);
         SpringApplication app = builder.build();
@@ -49,17 +50,17 @@ public class Launcher {
                         .build());
             }
         }).start();
-        try (DeliverExecutor deliverExecutor = context.getBean(DeliveryFactory.class)
-                .createDeliverExecutor()) {
-            deliverExecutor.execute(CustomConfiguration.builder()
-                    .userId("newAccount")
-                    .build());
-        }
-        try {
-            countDownLatch.await();
-        } catch (InterruptedException e) {
-            log.error("停止运行", e);
-        }
+        // try (DeliverExecutor deliverExecutor = context.getBean(DeliveryFactory.class)
+        //         .createDeliverExecutor()) {
+        //     deliverExecutor.execute(CustomConfiguration.builder()
+        //             .userId("newAccount")
+        //             .build());
+        // }
+        // try {
+        //     countDownLatch.await();
+        // } catch (InterruptedException e) {
+        //     log.error("停止运行", e);
+        // }
     }
 
 

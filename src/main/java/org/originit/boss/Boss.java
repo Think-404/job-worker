@@ -338,11 +338,13 @@ public class Boss implements DeliverExecutor {
                         return -1;
                     }
                     try {
-                        SeleniumUtil.sleep(1);
+                        SeleniumUtil.sleep(2);
                         try {
                             webDriver.findElement(By.xpath("//textarea[@class='input-area']"));
                             WebElement close = webDriver.findElement(By.xpath("//i[@class='icon-close']"));
+                            SeleniumUtil.sleep(1);
                             close.click();
+                            SeleniumUtil.sleep(1);
                             btn.click();
                         } catch (Exception ignore) {
                         }

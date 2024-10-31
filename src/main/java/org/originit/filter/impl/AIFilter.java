@@ -62,7 +62,7 @@ public class AIFilter implements Filter {
         if (bossConfig.getDescription() != null) {
             requestMessage.append("我的经历:").append(bossConfig.getDescription())
                     .append(",如果这个岗位和我的期望与条件符合,")
-                    .append("请返回true,否则返回false.");
+                    .append("请返回true,否则返回false.不允许返回额外的内容，只能返回false或者true");
         }
         try {
             Result<String, String> response = aiService.sendRequest(aiConfig, requestMessage.toString());
@@ -90,7 +90,7 @@ public class AIFilter implements Filter {
             requestMessage.append(",我对【").append(String.join(",", bossConfig.getKeywords())).append("】比较感兴趣,");
             requestMessage.append("岗位的名称是【").append(job.getJobName()).append("】.");
             requestMessage.append(",如果这个岗位和我的期望与条件符合,")
-                    .append("请返回true,否则返回false.");
+                    .append("请返回true,否则返回false.不允许返回额外的内容,只能返回false或者true");
             Result<String, String> result = aiService.sendRequest(aiConfig, requestMessage.toString());
             if (!result.isSuccess()) {
                 log.error("AI Filter failed and skip, jobTitle: {}, error: {}", job.getJobName(), result.getError());
